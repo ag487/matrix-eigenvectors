@@ -1,173 +1,135 @@
-This is an explanation of the matrix calculations used in finding the
-eigenvalues & eigenvectors of a matrix.
+This is an explanation of the matrix calculations used in finding the eigenvalues & eigenvectors of a matrix.
 
-# Symmetric matrix input
+I have assumed the input is a symmetric matrix (which reflects the image covariance matrix used in the case study). This also helps with the initial Hessenberg matrix reduction to tridiagonal form.
 
-I have assumed the input is a symmetric matrix (which reflects the covariance
-matrix used in the case study). The advantage is the eigenvectors of a
-symmetric matrix are orthogonal, well actually orthonormal as length is 1.
-Refer spectral theorem for proof.
-- for non-symmetric matrix X = eigvecs. eigvals. inverse of eigvecs
-- however given orthogonal, then eigvecs.eigvecsT = I so transpose is the inverse
-- X = eigvecs. eigvals. transpose of eigvecs
+### Theory basics
 
-# Householder reflection
+#### theory, matrix determinant
+Whether a matrix is invertible or not depends on the determinant. What is the determinant? Well let's try to invert a matrix & find e f g h.
+- [ a b ].[ e f ] = [ 1 0 ]
+- [ c d ] [ g h ]   [ 0 1 ]
 
-We use this reflection to convert the matrix X to Hessenberg form.
+We know from matrix multiplication that a.e + b.g = 1, c.e + d.g = 0. Then solve for e g.
+- g = -c.e / d
+- a.e + b.-c.e / d = 1  subs in other equation
+- e.(a.d - b.c) = d
+- e = d / (a.d - b.c)
+- g = -c / (a.d - b.c)
 
-- [ x11 x12 x13 x14 ]
-- [ x21 x22 x23 x24 ]
-- [ x31 x32 x33 x34 ]
-- [ x41 x42 x43 x44 ]
+We know from matrix multiplication that a.f + b.h = 0, c.f + d.h = 1. Then solve for f h.
+- h = -a.f / b
+- c.f + d.-a.f / b = 1  subs
+- f.(c.b - a.d) = b
+- f = -b / (a.d - b.c)
+- h = a / (a.d - b.c)
 
-We want to take the portion of each column below the diagonal, and reflect it
-onto a multiple of a basis vector. So, for the first column we want to reflect
-vector [ x21 x31 x41 ] onto a multiple of the basis vector [ 1 0 0 ].
+then inverse is.
+- [ d -b ] / (a.d - b.c)
+- [-c  a ]
 
-Given we are using the symmetry of reflection, we know the vector and multiple
-must have the same length, given basis vector has length 1. So we can calculate
-multiple as the norm of the vector. For instance, norm of vector [3 4] is 5.
+If the determinant a.d - b.c = 0, then the matrix does not have an inverse. This means the matrix is not full rank.
+
+#### theory, matrix eigenvectors & eigenvalues
+Matrix M multiplied by vector u, gives another vector v. We define the characteristic vector or eigenvector as a non-zero vector u, that gives vector v which is a scalar multiple of u. The scalar multiple is the eigenvalue for that eigenvector.
+
+can then rearrange.
+- M. u = eigval. u
+- M. u - eigval. u = 0
+- (M - eigval. identity). u = 0
+
+If the above matrix were invertible, we could multiply both sides of the equation by its inverse. This would result in u = 0, which contradicts our definition that u is non-zero. Therefore the matrix cannot be invertible, meaning its determinant = 0.
+
+Take as an example a 2x2 matrix M, with elements a b c d, and calculate the determinant of the above matrix.
+- [a - eigval  b          ]
+- [c           d - eigval ]
+- (a - eigval).(d - eigval) - b.c = 0
+- eigval^2 - (a + d).eigval + (a.d - b.c) = 0
+
+This represents the characteristic polynomial p(x) = (x - eigval 1).(x - eigval 2) where the eigenvalues are the zeros of the function. Helpfully, the constant term of a.d - b.c equals the product of the eigenvalues. So we know the product of eigenvalues equals the determinant of underlying matrix M. This is useful in the Wilkinson shift section below.
+
+Additionally, given the characteristic polynomial here is of degree 2, we can use the quadratic formula to solve. Substituting in the quadratic formula of (-b' +- (b' ^2 - 4.a'.c') ^0.5) / 2.a' gives.
+- (a + d +- ((a + d) ^2 - 4.(a.d - b.c)) ^0.5) / 2
+- (a + d)/2 +- (a^2 + 2.a.d + d^2 - 4.a.d + 4.b.c) ^0.5 / 2
+- (a + d)/2 +- (a^2 - 2.a.d + d^2 + 4.b.c) ^0.5 / 2
+- (a + d)/2 +- ((a - d) ^2 + 4.b.c) ^0.5 / 2
+- (a + d)/2 +- (((a - d) /2) ^2 + b.c) ^0.5
+- which gives an equation for the two eigenvalues
+
+### Householder reflection
+
+#### find hyperplane
+We use Householder reflections to convert the symmetric matrix to Hessenberg form.
+
+We want to take the portion of each column below the diagonal, and reflect it onto a multiple of a basis vector. Take for example a 4x4 matrix. We would start with rows 2-4 of column 1. This gives us a vector x = [ x21 x31 x41 ] using row column indices. We want to reflect this onto a multiple of the basis vector [ 1 0 0 ].
+
+Given we are using the symmetry of reflection, we know both vectors have the same length. So we know the multiple is the norm of vector x. For instance, norm of [ 2 4 4 ] = (2^2 + 2. 4^2)^1/2 = 6. In this example, we know the reflected vector is [ 6 0 0 ].
 
 We can visualise in terms of geometry:
 - vector x is known
 - basis vector times multiple is known = norm x. b
-- these two vectors are reflected across a hyperplane (representing matrix X)
+- these two vectors are reflected across a hyperplane
+- to find the hyperplane, just add the two vectors = [ 8 4 4 ]
 
-Again, as we are using the symmetry of reflection, we know  x - norm x. b is
-orthogonal to the hyperplane. So we can use the vector in this direction to
-describe the hyperplane. Define vector v = x - norm x. b
-
-## Theory, two vectors orthogonal portion
-
-If we take two vectors x & v, we can find the portion of vector x in the same
-direction as v, as well as the portion not in the same direction (ie orthogonal
-or perpendicular).
+#### split parallel & perpendicular
+If we take any two vectors x & v, we can find the portion of vector x in the same direction as v, as well as the portion not in the same direction (ie orthogonal or perpendicular) so define x = c.v + d.
 
 portion in same direction.
-- find x = a.v + b
-- dot with v, gives x.v = a.v.v + b.v  
-- where b.v = 0 as orthogonal to v
-- rearrange as  a = x.v / v.v
+- c.v is the portion, c the multiple
+- find c
+- dot with v, gives xT.v = c. vT.v + dT.v  
+- where dT.v = 0 given orthogonal
+- rearrange to  c = xT.v / vT.v
 
 portion orthogonal.
-- x - a.v
-- x - x.v / vT.v . v
-- x - v.vT.x / vT.v
+- find d
+- x - c.v
+- x - xT.v. v / vT.v
 
-If instead we were to subtract double the amount from x, this would give a
-reflection of x across the portion of x orthogonal to vector v.
+#### apply reflection
+To reflect each column of the matrix across the hyperplane, keep the portion in the same direction as the hyperplane, but reverse the portion orthogonal.
+- c.v - (x - c.v)
+- 2.c.v - x
+- 2. xT.v.v / vT.v - x
 
-## Theory, Householder formula
+we can simplify.
+- 2.v. xT.v / vT.v - x  rearrange as scalar. vector = vector. scalar
+- 2.v. vT.x / vT.v - x  dot product is commutative
+- (2.v.vT / vT.v - identity). x
 
-the theory is that.
-- if v = x + norm x. b is non zero, then H(x) = - norm x. b
-- else if v = x - norm x. b is non zero, then H(x) = norm x. b
+### Givens rotations
 
-proof for first case.
-- from the above, we know the reflection H(x) = x - 2.v.vT.x / vT.v
-- can we simplify this?
+Once we have the Hessenberg form of the matrix, we can apply Givens rotations to decompose the matrix into an orthonormal matrix times an upper triangular matrix.
 
-take vT.v
-- (x + norm x. b)T. (x + norm x. b)
-- xT.x + norm x. xT. b + norm x. bT. x + norm x ^2. bT. b
-- norm x ^2 + norm x. x1 + norm x. x1 + norm x ^2
-- = 2. norm x. (norm x + x1)
+The objective is to rotate the column vector [a b] onto a column vector [r 0]. The vectors should have the same norm, so r^2 = a^2 + b^2.
 
-take v.vT.x
-- (x + norm x. b). (x + norm x. b)T. x
-- x.xT.x + norm x. x. bT. x + norm x. b. xT. x + norm x ^2. b. bT. x
-- norm x ^2. x + norm x. x1. x + norm x ^3. b + norm x ^2. x1. b
-- norm x. (norm x. x + x1. x + norm x ^2. b + norm x. x1. b)
-- norm x. ((norm x + x1). x + norm x. (norm x + x1). b)
-- = norm x. (norm x + x1). (x + norm x. b)
+This brings to mind trigonometry. The angle theta from the first to second vector has cos = a/r and sin = -b/r. The matrix that would then rotate a b onto the basis vector is.
+- [ cos -sin ].[ a ] = [ a^2/r + b^2/r ] = [ r ]
+- [ sin  cos ] [ b ]   [-a.b/r + a.b/r ]   [ 0 ]
 
-then H(x) simplified.
-- x - 2.v.vT.x / vT.v
-- x - 2. norm x. (norm x + x1). (x + norm x. b) / (2. norm x. (norm x + x1))
-- x - (x + norm x. b)
-- = - norm x. b  proven
+The other advantage of using cos and sin is that the matrix is orthonormal as cos ^2 + sin ^2 = 1.
 
-# Givens rotations
+### Wilkinson shift
 
-Once we have the Hessenberg form of the matrix, we can apply Givens rotations
-to decompose the matrix into an orthonormal matrix times an upper triangular
-matrix.
+While we could apply the Givens rotations directly to the Hessenberg form of the matrix, convergence would be slow. To speed convergence we can apply a Wilkinson shift to the lower right corner of the matrix, essentially subtracting an eigenvalue.
 
-- [ h11 h12 h13 h14 ]
-- [ h21 h22 h23 h24 ]
-- [ -   h32 h33 h34 ]
-- [ -   -   h43 h44 ]
-
-The objective is to rotate the column vector [a b] onto a column vector [r 0].
-To preserve the eigenvalues, the column vectors should have the same norm. So
-r^2 = a^2 + b^2.
-
-This brings to mind trigonometry. The angle theta between a,b and the basis vector
-has cos = a/r and sin = b/r. The matrix that would then rotate a,b onto the
-basis vector, when multiplied on the left is.
-- [ cos -sin ]
-- [ sin cos ]
-
-The other advantage of using cos and sin is that the matrix is orthonormal
-as cos ^2 + sin ^2 = 1.
-
-# Wilkinson shift
-
-We could apply the Givens rotations directly to the Hessenberg form of the matrix.
-However, convergence would be slow. To speed convergence we can apply a Wilkinson
-shift to the lower right corner of the matrix, basically subtracting an eigenvalue.
-
-- [a b]
-- [c d]
-
-## Theory, eigenvectors & eigenvalues
-
-A matrix multiplied by vector, gives another vector  A. u = v
-- by defn u is eigenvector if u has length 1 & v is scalar multiple of u
-- eigenvalue is the scalar multiple
-
-can then rearrange.
-- A. u - eigenvalue. u = 0
-- (A - eigenvalue. I). u = 0
-- has non-zero solution for u if and only if the determinant is 0
-- determinant here is the characterisic polynomial
-- in geometry, determinant is the scalar area of the parallelogram (0,0) (a,b)
-(a+c,b+d) (c,d) = a.d - b.c
-
-can then calculate a.d - b.c
-- (a - eig). (d - eig) - b. c
-- a.d - a.eig - d.eig + eig ^ 2 - b.c
-- eig ^ 2 - (a + d).eig + (a.d - b.c) = 0
-
-use quadratic formula & substitute (-b +- (b.b - 4.a.c) ^ 0.5) / 2.a
-- (a + d +- ((a + d) ^ 2 - 4.(a.d - b.c)) ^ 0.5) / 2
-- (a + d)/2 +- (a.a + 2.a.d + d.d - 4.a.d + 4.b.c) ^ 0.5 / 2
-- (a + d)/2 +- (a.a - 2.a.d + d.d + 4.b.c) ^ 0.5 / 2
-- (a + d)/2 +- ((a - d) ^ 2 + 4.b.c) ^ 0.5 / 2
-- (a + d)/2 +- (((a - d) / 2) ^ 2 + b.c) ^ 0.5
-- gives the eigenvalues
-
-## Theory, Wilkinson shift
-
-The above formula is used in the denominator of the Wilkinson shift calculation.
-- matrix is symmetric so b=c
-- eig2 = d - sign.(c ^ 2) / (abs((a - d) /2) + (((a - d) /2) ^ 2 + c ^ 2) ^ 0.5)
-- eig2 = d - sign.(c ^ 2) / (eig1 - d)
-- eig2.eig1 - eig2.d = d.eig1 - d.d - sign.(c ^ 2)
-- eig2.eig1 = d.(eig1 + eig2) - d.d - sign.(c ^ 2)
+The eigenvalue formula from the theory section above is used in the denominator of the Wilkinson shift calculation. We will check this in reverse, rather than re-deriving the formula.
+- matrix is symmetric so b = c
+- eig2 = d - sign.(c^2) / ((a - d)/2 + (((a - d) /2) ^2 + c^2) ^0.5)
+- eig2 = d - sign.(c^2) / (eig1 - d)
+- eig2. eig1 - eig2. d = d. eig1 - d^2 - sign.(c^2)
+- eig2. eig1 = d.(eig1 + eig2) - d^2 - sign.(c^2)
 - we know trace = eig1 + eig2 = a + d
-- eig2.eig1 = d.a + d.d - d.d - sign.(c ^ 2)
-- eig2.eig1 = a.d - sign.(c ^ 2)
-- we know RHS is determinant, so proven correct
+- eig2. eig1 = d.a + d^2 - d^2 - sign.(c^2)
+- eig2. eig1 = a.d - sign.(c^2)
 
-# Power iteration
+LHS is the product of eigenvalues, RHS is the determinant of the underlying matrix. From the theory section, we know these are equal. So check complete. Wilkinson shift gives us one of the eigenvalues.
 
+### Power iteration
 Ignoring subtleties of the calculations for a moment.
-- qr_givens function takes input H1 & returns Q1,R1 where R1 = Q1T.H1
-- decomposition function recombines H2 as R1.Q1 = Q1T.H1.Q1
-- iteration continues eg H4 = Q3T.Q2T.Q1T.H1.Q1.Q2.Q3
+- qr_givens function takes input M & returns Q R where M = Q.R so R = QT.M
+- decomposition function recombines M2 as R.Q = QT.M.Q
+- iteration continues eg M4 = Q3T.Q2T.QT.M.Q.Q2.Q3
 
-Repeated iteration essentially takes the matrix in the direction of the
-eigenvectors.
+Repeated iteration essentially takes the matrix in the direction of the eigenvectors. We set an arbitrary stopping point when c of the Wilkinson shift matrix is small enough.
 
 ENDS
