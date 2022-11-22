@@ -1,108 +1,81 @@
 #!/usr/bin/env python3
 
+import cv2
 import math
 import numpy as np
-from PIL import Image
 
-from utilities import matrix, eigen
+import sys
 
-"""
-image chosen is 512x512 so if take first 128 eigenvalues
-results in noise of about 37 dB comparing rebuilt image to original
-changing N_EIGS will change the resolution of the rebuilt image
-"""
+from utilities import hess, qr
+
 
 N_EIGS = 128
 
-def import_image():
-    print('image reduction by decomposition of covariance matrix')
-    with Image.open("Lenna.png") as im:
-        print('importing image..', im.format, im.mode, im.size)
-        img_bw = np.asarray(im.convert(mode="L"))  # change to greyscale
-        m = im.size[0]
-        n = im.size[1]
-    img_norm = np.empty([m, n])
-    cols_mean = np.zeros([n])
-    cols_std = np.zeros([n])
-    for j in range(n):
-        for i in range(m):
-            cols_mean[j] += img_bw[i, j]
-        cols_mean[j] /= m
-        for i in range(m):
-            cols_std[j] += pow(img_bw[i, j] - cols_mean[j], 2)
-        cols_std[j] = pow(cols_std[j] / m, 0.5)
-    for j in range(n):
-        for i in range(m):
-            img_norm[i, j] = (img_bw[i, j] - cols_mean[j]) / cols_std[j]
-    img_cov = np.matmul(img_norm.T, img_norm) / (m - 1)
-    return img_bw, img_norm, img_cov, cols_mean, cols_std
+# image chosen is 512x512 so if take first 128 eigenvalues
+# results in noise of about 38 dB comparing rebuilt image to original
+# changing N_EIGS will change the resolution of the rebuilt image
 
 
-def find_eigs(img_cov):
-    m = img_cov.shape[0]
-    vals_sorted = np.empty([N_EIGS])
-    vecs_sorted = np.empty([m, N_EIGS])
-    print('finding eigenvectors..')
-    Q1, H = matrix.hessenberg(img_cov)
-    Q2, eig_vals = eigen.decomposition(H)
+def compress_image(img):
+    dims = img.shape
+    print(f"imported image..  pixel height {dims[0]}, width {dims[1]}")
+        
+    col_mean = np.sum(img, axis=0) / dims[0]
+    img_norm = img - col_mean   # subtract mean from each row
+
+    col_stdev = np.sum(img_norm * img_norm, axis=0) / dims[0]   # elementwise multiplication
+    col_stdev = np.asarray([pow(s, 0.5) for s in col_stdev.tolist()])
+    img_norm = img_norm / col_stdev   # divide each row
+
+    img_cov = np.matmul(img_norm.T, img_norm) / (dims[0] - 1)
+
+    print("finding eigenvectors..")
+
+    # below lines could be replaced with   eig_vals, eig_vecs = np.linalg.eig(img_cov)
+    Q1, H = hess.hessenberg(img_cov)
+    Q2, eig_vals = qr.decomposition(H)    
     eig_vecs = np.matmul(Q1, Q2)
-    # above lines equivalent to   eig_vals, eig_vecs = np.linalg.eig(img_cov)
+  
     abs_vals = np.asarray([abs(v) for v in eig_vals])
-    v_indices = np.argsort(abs_vals)
-    for i in range(N_EIGS):
-        pos = v_indices[m-1-i]
-        vals_sorted[i] = eig_vals[pos]
-        vecs_sorted[:, i] = eig_vecs[:, pos]
-    print("sorted by eigenvalue")
-    print("vecs, vals:", vecs_sorted.shape, vals_sorted.shape)
-    return vals_sorted, vecs_sorted
+    v_indices = np.argsort(abs_vals)[::-1][:N_EIGS]   # highest N_EIGS, after reversing argsort which returns low to high
+    vecs_sorted = eig_vecs[:, v_indices]
+    vals_sorted = np.asarray(eig_vals)[v_indices]
+
+    print(f"sorted by {N_EIGS} highest eigenvalues")
+    print(f"vecs, vals shape: {vecs_sorted.shape}, {vals_sorted.shape}")
+
+    components = np.matmul(img_norm, vecs_sorted)   # project image on reduced eigenvectors
+    print(f"principal components shape {components.shape}")
+    return components, vecs_sorted, col_mean, col_stdev
 
 
-def project_components(img_norm, vecs):
-    pc = np.matmul(img_norm, vecs)  # project image on reduced eigenvectors
-    print("principal components:", pc.shape)
-    ratio = img_norm.shape[1] / (pc.shape[1] + vecs.shape[1] + 2)  # add 2 to include mean & std vectors
-    print("compression ratio:", ratio)
-    img_rebuilt = np.matmul(pc, vecs.T)
-    return img_rebuilt
-
-
-def display(img_rebuilt, cols_std, cols_mean):
-    array = []
-    for j in range(512):
-        line = []
-        for i in range(512):
-            line.append(img_rebuilt[i, j] * cols_std[j] + cols_mean[j])
-        array.append(line)
-    img_after = np.asarray(array).T
-    img_after.astype(int)
-    img2 = Image.fromarray(img_after)
-    print('rebuilt image:', img2.format, img2.mode, img2.size)
-    img2.show()
+def rebuild_image(components, vecs, cols_mean, cols_std):
+    img_after = np.matmul(components, vecs.T) * cols_std + cols_mean   # multiply and add for each row
+    img_after = img_after.astype("uint8")
     return img_after
 
 
-def noise(img_orig, img_after):
-    m = img_orig.shape[0]
-    n = img_orig.shape[1]
-    mse = 0
-    for i in range(m):
-        for j in range(n):
-            mse += pow(img_orig[i, j] - img_after[i, j], 2)
-    mse /= m * n
-    psnr = 10 * math.log(pow(255, 2) / mse, 10)  # max pixel value is 255
-    print("peak signal to noise ratio in dB:", psnr)
+def calc_noise(img, img_after):
+    dims = img.shape
+    diff = img - img_after
+    mse = np.sum(diff * diff) / (dims[0] * dims[1])   # elementwise multiplication
+    psnr = 10 * math.log(pow(255, 2) / mse, 10)   # max pixel value is 255
+
+    print(f"peak signal to noise ratio in dB: {psnr:.01f}")
     print("higher the better, typically lossy compression is 30-50 dB")
     return
-
-
-def main():
-    img_bw, img_norm, img_cov, cols_mean, cols_std = import_image()
-    vals, vecs = find_eigs(img_cov)
-    img_rebuilt = project_components(img_norm, vecs)
-    img_after = display(img_rebuilt, cols_std, cols_mean)
-    noise(img_bw, img_after)
-    return
+    
 
 if __name__ == '__main__':
-    main()
+    img = cv2.imread("Lenna.png", 0)   # reads as greyscale
+
+    components, vecs, cols_mean, cols_std = compress_image(img)
+
+    img_after = rebuild_image(components, vecs, cols_mean, cols_std)
+
+    ratio = img.shape[1] / (components.shape[1] + vecs.shape[1] + 2)   # add 2 to include mean & stdev vectors
+    print(f"compression ratio = {ratio:.01f}")
+    calc_noise(img, img_after)
+
+    cv2.imshow("rebuilt image", img_after)
+    cv2.waitKey(0)   # shows image until window is selected and any key pressed
