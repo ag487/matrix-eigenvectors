@@ -1,28 +1,22 @@
 This Python3 implementation is in two parts.
 
-### Finding eigenvectors of matrix
-The first part calculates the eigenvectors & eigenvalues of a symmetric matrix from scratch.
-- uses Householder reflection to convert a matrix to Hessenberg form
-- applies reflection twice, to take matrix to tridiagonal form
-- then uses repeated Givens rotations to QR decompose the matrix & together with Wilkinson shift, to find the eigenvectors & eigenvalues
+## Find eigenvectors of matrix
+Calculates eigenvectors & eigenvalues of a symmetric matrix from scratch.
+- uses Householder reflections to convert the matrix to Hessenberg form
+- uses repeated Givens rotations to QR decompose the matrix, together with Wilkinson shift to speed convergence
 - runtime should be a few seconds
 
-I have included a document explaining as simply as possible the logic behind these matrix calculations, which was written for my own interest.
+I have included a theory document explaining as simply as possible the logic behind these matrix calculations, which was written for my own interest.
 
-### Image decomposition
-The second part is a case study implementing the matrix calculations.
+## Compress image using eigenvectors
+Case study implements the matrix calculations.
 - imports 512x512 pixel photo
-- decomposes the photo into matrices of 512 eigenvectors & eigenvalues, using the above
-- takes n most significant eigenvalues (initially n=128)
+- decomposes into matrices of 512 eigenvectors & eigenvalues
+- takes n most significant eigenvectors (initially n=128)
 - projects image onto significant eigenvectors, resulting in principal component matrix, which represents the image in compressed form
-- rebuilds the compressed form & displays the image
-- calculates noise difference between original and rebuilt photo
+- rebuilds an image from the compressed form
+- calculates noise difference between original and rebuilt photo - which results in a peak signal to noise ratio of about 38 dB (within the range of 30-50 dB usually considered reasonable for compression)
 
-The utilities folder could be replaced with numpy.linalg.eig, if you are only interested in the image decomposition.
-
-### Results
-Using 128 eigenvectors on a 512x512 image results in a compression ratio of about 2.0, giving a rebuilt image with a peak signal to noise ratio of about 38 dB.
-
-This is within the range of 30-50 dB usually considered reasonable for compression.
+Part 1 could be replaced with numpy.linalg.eig, if you are only interested in the image decomposition.
 
 ENDS
