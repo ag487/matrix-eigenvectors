@@ -15,7 +15,7 @@ Case study implements the matrix calculations.
 - takes n most significant eigenvectors (initially n=128)
 - projects image onto significant eigenvectors, resulting in principal component matrix, which represents the image in compressed form
 - rebuilds an image from the compressed form
-- calculates noise difference between original and rebuilt photo - which results in a peak signal to noise ratio of about 38 dB (within the range of 30-50 dB usually considered reasonable for compression)
+- calculates noise difference between original and rebuilt photo - which results in a peak signal to noise ratio of about 36 dB (within the range of 30-50 dB usually considered reasonable for compression)
 
 Part 1 could be replaced with numpy.linalg.eig, if you are only interested in the image decomposition.
 

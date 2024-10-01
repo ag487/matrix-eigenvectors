@@ -1,11 +1,9 @@
 ## Overview
 
-This is an explanation of the matrix calculations used in finding the eigenvalues & eigenvectors of a matrix. Throughout, I have assumed the input is a symmetric matrix (which is consistent with the image covariance matrix used in the case study).
+This is a brief explanation of the calculations used in finding the eigenvalues & eigenvectors of a matrix. Throughout, I have assumed the input is a symmetric matrix (which is consistent with the image covariance matrix used in my example).
 
 
-## 1. Theory essentials
-
-### 1.1 Matrix inverse and determinant
+### 1.1 Basics, natrix inverse and determinant
 
 A matrix may or may not be invertible. A matrix is invertible if it can be multiplied by another matrix to give the identity matrix. That is, it has an inverse. For instance, let's take a 2x2 matrix and assume it has an inverse. Then multiplying the two matrices together would result in the identity matrix.
 
@@ -51,8 +49,6 @@ A matrix multiplied by a vector results in another vector. Say a 3x3 matrix mult
 
 If the resulting vector is a scalar multiple of the initial vector, then the initial vector is known as an eigenvector of the original matrix. So an eigenvector here is the column vector 1, and the eigenvalue is the scalar 3.
 
-Let's define this to exclude zero vectors, as a zero vector takes any matrix to another zero vector, so gives a trivial result.
-
 As an aside, an eigenvector itself is not as important as the relative proportions of its components. For instance, as the above matrix has the effect of tripling the column vector, it will also triple double that vector. So there is more than one eigenvector for each eigenvalue, however their proportions are the same. Usually, the representative eigenvector chosen is that with length 1.
 
 Rearranging.
@@ -65,7 +61,7 @@ Rearranging.
 [  5 -5  0 ] [ 1 ]   [ 0 ]  
 [  1  3 -4 ] [ 1 ]   [ 0 ]  
 
-If the reduced matrix in brackets above (matrix - scalar. identity) were invertible, then it could be multiplied by its inverse to give the identity. This would result in 1.vector = 0, which contradicts our definition that the vector is non-zero. Thus the reduced matrix cannot be invertible, meaning its determinant = 0.
+If the reduced matrix in brackets above (matrix - scalar. identity) were invertible, then it could be multiplied by its inverse to give the identity. This would result in 1.vector = 0, which contradicts the requirement that the vector is non-zero (otherwise giving a trivial outcome). Thus the reduced matrix cannot be invertible, meaning its determinant = 0.
 
 
 ### 1.3 Characteristic polynomial
@@ -102,7 +98,7 @@ Also, from the symmetry of polynomial equations we know the product of the eigen
 
 The first step is to convert the symmetric matrix (X) to Hessenberg form (H) with zeros below the subdiagonal. The advantage is a Hessenberg matrix has the same eigenvalues as the original matrix, and the zeros make further calculations easier (the eigenvectors can be recovered with the Q matrix in X = Q.H.QT).
 
-Note the matrix cannot be taken directly to diagonal form by Householder reflections. The reason is that, if we aim for zeros below the subdiagonal, while the reflection affects the first column, it does not affect the first row. However, if we aim for zeros below the diagonal, it does affect the first row. For the LHS multiplication this is fine, but when applied on the RHS this has the effect of disturbing the reflection applied to the first column. Hence, limit to the subdiagonal.
+While it may seem an idea to take the matrix directly to diagonal form, this is not ideal. The reason is that, if we aim for zeros below the subdiagonal, while the reflection affects the first column, it does not affect the first row. However, if we aim for zeros below the diagonal, it does affect the first row. For the left side multiplication this is fine, but when applied on the right side this has the effect of disturbing the reflection applied to the first column. Hence, limit to the subdiagonal.
 
 
 ### 2.1 Householder reflection
@@ -139,7 +135,7 @@ We could multiply the entire nxn matrix by the reflection matrix embedded in an 
 [ - x x x ] [ x x x x ]   [ x x x x ]  
 [ - x x x ] [ x x x x ]   [ x x x x ]  
 
-Multiplying on the RHS 4x3 . 3x3 = 4x3.
+Multiplying on the right side 4x3 . 3x3 = 4x3.
 
 [ a x x x ].[ 1 - - - ] = [ a x x x ]  
 [ a x x x ] [ - x x x ]   [ a x x x ]  
@@ -191,7 +187,7 @@ Instead of re-deriving the formula, we will just check the formula used for Wilk
 * eig1. eig2 = d.a + d^2 - d^2 - c^2
 * eig1. eig2 = a.d - c^2
 
-LHS is the product of eigenvalues, RHS is the determinant of the underlying matrix. From the theory section, these are equal. Check complete. Wilkinson shift gives one of the eigenvalues.
+Left side is the product of eigenvalues, right side is the determinant of the underlying matrix. From the theory section, these are equal. Check complete. Wilkinson shift gives one of the eigenvalues.
 
 
 ### 3.4 Power iteration

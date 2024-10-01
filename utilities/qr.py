@@ -16,16 +16,16 @@ def givens_rotation(M):
     Q = np.eye(m, dtype="float64")
     R = np.copy(M).astype("float64")
 
-    for j in range(m - 1):
-        vector = R[j:j+2, j]   # the two diagonal and subdiagonal elements of a column
+    for k in range(m - 1):
+        vector = R[k:k+2, k]   #the two diagonal and subdiagonal elements of a column
 
         norm = pow(np.dot(vector.T, vector), 0.5)
         cos = vector[0] / norm
         sin = vector[1] / norm
-        rotate = np.array([[cos, sin], [-sin, cos]], dtype="float64")   # 2x2 clockwise rotation matrix
+        rotate = np.array([[cos, sin], [-sin, cos]], dtype="float64")   #2x2 clockwise rotation matrix
 
-        R[j:j+2, :] = np.matmul(rotate, R[j:j+2, :])   # faster than using full nxn multiplication
-        Q[:, j:j+2] = np.matmul(Q[:, j:j+2], rotate.T)
+        R[k:k+2, :] = np.matmul(rotate, R[k:k+2, :])   #faster than using full nxn multiplication
+        Q[:, k:k+2] = np.matmul(Q[:, k:k+2], rotate.T)
 
     return Q, R
 
@@ -51,29 +51,32 @@ def decomposition(H):
 
     H = Q2.right.Q2T
     """
+
+    assert isinstance(H, np.ndarray)
+    assert H.ndim == 2
     
-    n = H.shape[0]
-    identity = np.eye(n, dtype="float64")
+    n_rows = H.shape[0]
+    identity = np.eye(n_rows, dtype="float64")
     Q2 = np.copy(identity)
     right = np.copy(H).astype("float64")
 
     count = 0
-    for k in range(n, 1, -1):  # 512 .. 2
+    for j in range(n_rows, 1, -1):  #512 .. 2
         while True:
             count += 1
 
-            w = wilkinson_shift(right[k-2:k, k-2:k])   # returns scalar from lower right 2x2 matrix
-            right_shifted = right[:k, :k] - w * identity[:k, :k]
+            w = wilkinson_shift(right[j-2:j, j-2:j])   #returns scalar from lower right 2x2 matrix
+            right_shifted = right[:j, :j] - w * identity[:j, :j]
 
             Q, R = givens_rotation(right_shifted)
-            Q2[:, :k] = np.matmul(Q2[:, :k], Q)
-            right[:k, :k] = np.matmul(R, Q) + w * identity[:k, :k]
+            Q2[:, :j] = np.matmul(Q2[:, :j], Q)
+            right[:j, :j] = np.matmul(R, Q) + w * identity[:j, :j]
 
-            if abs(right[k-1, k-2]) < 1e-4:   # arbitrary stopping value for c in Wilkinson sub matrix
+            if abs(right[j-1, j-2]) < 1e-4:   #arbitrary stopping value for c in Wilkinson sub matrix
                 break
 
-        if (513 - k) % 100 == 0:
+        if (513 - j) % 100 == 0:
             print(f"qr iter: {count}..")
 
-    eigvals = [right[j, j] for j in range(n)]
+    eigvals = [right[i, i] for i in range(n_rows)]
     return Q2, eigvals
