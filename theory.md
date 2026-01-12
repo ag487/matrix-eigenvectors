@@ -61,7 +61,12 @@ Rearranging.
 [  5 -5  0 ] [ 1 ]   [ 0 ]  
 [  1  3 -4 ] [ 1 ]   [ 0 ]  
 
-If the reduced matrix in brackets above (matrix - scalar. identity) were invertible, then it could be multiplied by its inverse to give the identity. This would result in 1.vector = 0, which contradicts the requirement that the vector is non-zero (otherwise giving a trivial outcome). Thus the reduced matrix cannot be invertible, meaning its determinant = 0.
+If the reduced matrix in brackets above (matrix - scalar. identity) were invertible, then it could be multiplied by its inverse to give the identity. This would result in 
+
+* M inverse . M . vector = M inverse . zero vector
+* vector = zero vector
+
+which contradicts the requirement that the eigenvector is non-zero (otherwise giving a trivial outcome). Thus the reduced matrix cannot be invertible, meaning its determinant = 0.
 
 
 ### 1.3 Characteristic polynomial
@@ -76,22 +81,40 @@ So then the reduced matrix of (matrix - eigval. identity) is.
 [ a-eigval  b        ]  
 [ c 	    d-eigval ]  
 
-We know the determinant of a 2x2 matrix is a.d - b.c. So the determinant for the above is (a-eigval).(d-eigval) - b.c and we know this is zero. Rearranging then gives eigval^2 - (a + d).eigval + (a.d - b.c) = 0. This is the characteristic polynomial for this matrix. The eigenvalues are the zeros of the polynomial, so if we can solve the polynomial we will know the eigenvalues. In the case of a 2x2 matrix, the characteristic polynomial is of degree 2, so the quadratic formula gives the solution. For a standard quadratic a.x^2 + b.x + c = 0 the formula is (-b +- (b^2 - 4.a.c) ^1/2) / 2.a. Substituting the characteristic polynomial terms in the quadratic formula:
+We know the determinant of a 2x2 matrix is a.d - b.c. So the determinant for the reduced matrix is (a-eigval).(d-eigval) - b.c and we know this is zero. Rearranging then gives eigval^2 - (a + d).eigval + (a.d - b.c) = 0. This is the characteristic polynomial for this matrix. The eigenvalues are the zeros of the polynomial, so if we can solve the polynomial we will know the eigenvalues. In the case of a 2x2 matrix, the characteristic polynomial is of degree 2, so the quadratic formula gives the solution. For a standard quadratic a.x^2 + b.x + c = 0 the formula is (-b +- sqrt(b^2 - 4.a.c)) / 2.a. Substituting the characteristic polynomial terms in the quadratic formula:
 
-* (a + d +- ((a + d) ^2 - 4.(a.d - b.c)) ^1/2) / 2
-* = (a + d)/2 +- (a^2 + 2.a.d + d^2 - 4.a.d + 4.b.c) ^1/2 / 2
-* = (a + d)/2 +- (a^2 - 2.a.d + d^2 + 4.b.c) ^1/2 / 2
-* = (a + d)/2 +- ((a - d) ^2 + 4.b.c) ^1/2 / 2
-* = (a + d)/2 +- (((a - d) /2) ^2 + b.c) ^1/2
+* (a + d +- sqrt((a + d) ^2 - 4.(a.d - b.c))) / 2
+* = (a + d)/2 +- sqrt(a^2 + 2.a.d + d^2 - 4.a.d + 4.b.c) / 2
+* = (a + d)/2 +- sqrt(a^2 - 2.a.d + d^2 + 4.b.c) / 2
+* = (a + d)/2 +- sqrt((a - d)^2 + 4.b.c) / 2
+* = (a + d)/2 +- sqrt(((a - d)/2)^2 + b.c)
 
 This gives an equation for the two eigenvalues, and is used in the Wilkinson shift section. 
 
-Also, from the symmetry of polynomial equations we know the product of the eigenvalues = a.d - b.c. For instance, taking a basic polynomial example below, we can see the constant term (which above = a.d - b.c and below = 6) must be equal to the product of the two values that satisfy the equation (which above are the two eigenvalues).
+Also, from the symmetry of polynomial equations we know here the product of the eigenvalues = a.d - b.c. For instance, using the quadratic example below, we can see the constant term (which above = a.d - b.c and below = 6) must be equal to the product of the two values that satisfy the equation (which above are the two eigenvalues).
 
 * (x - 2).(x - 3)
 * = x^2 - (2 + 3).x + (2.3)
 * = x^2 - 5.x + 6
 
+
+### 1.4 Trace
+
+From the above sections we see the eigenvalues tend to cluster along the diagonal. The sum of the values along the diagonal is called the trace. The following is an abbreviated way of showing that the trace of matrix M is equal to the trace of the diagonalised version of the matrix (ie, containing only eigenvalues).
+
+For starters, if we multiply two 3x3 matrices A.B = C then we have three values along the diagonal of C that add to give the trace:
+
+* a11.b11 + a12.b21 + a13.b31  (using row column indices)
+* a21.b12 + a22.b22 + a23.b32
+* a31.b13 + a32.b23 + a33.b33
+
+And if we read down the columns of the above values we see this trace is the same as the trace for B.A = C', as even though the diagonal values may differ in C' compared to C, their sum is the same.
+
+* b11.a11 + b12.a21 + b13.a31
+* b21.a12 + b22.a22 + b23.a32
+* etc
+
+So we see that Tr(A.B) = Tr(B.A). If B were the product of two matrices B.C then Tr(A.B.C) = Tr(B.C.A). Then from M = Q.D.QT we can apply the trace function and rearrange so Tr(Q.D.QT) = Tr(QT.Q.D) and from knowing QT is the inverse of Q, then Tr(M) = Tr(D).
 
 
 ## 2. Hessenberg matrix function
@@ -100,12 +123,14 @@ The first step is to convert the symmetric matrix (X) to Hessenberg form (H) wit
 
 While it may seem an idea to take the matrix directly to diagonal form, this is not ideal. The reason is that, if we aim for zeros below the subdiagonal, while the reflection affects the first column, it does not affect the first row. However, if we aim for zeros below the diagonal, it does affect the first row. For the left side multiplication this is fine, but when applied on the right side this has the effect of disturbing the reflection applied to the first column. Hence, limit to the subdiagonal.
 
+These calculations can be checked with jax.scipy.linalg.hessenberg. Notice though the eigenvalues might be in a different order, or have opposite sign, given the interaction with the eigenvectors.
+
 
 ### 2.1 Householder reflection
 
 For a Householder reflection, the portion of each column below the diagonal is to be reflected onto a multiple of the basis vector. For example, a 4x4 matrix would start with rows 2-4 of column 1. This gives a vector x = [ x21 x31 x41 ] using row column indices. The objective is to reflect this onto a multiple of the basis vector [ 1 0 0 ].
 
-Given the symmetry is reflection, both vectors have the same length. The multiple of the basis vector must then be equal to the length of vector x. For instance, length or norm of vector [ 2 4 4 ] = (2^2 + 2. 4^2) ^1/2 = 6. Then the reflected vector must be 6 times the basis vector = [ 6 0 0 ]. In summary, vector x is known, so then basis vector times the multiple is known = norm x. b. These two vectors are reflected across a hyperplane, which is the sum of the two column vectors = [ 8 4 4 ].
+Given the symmetry is reflection, both vectors have the same length. The multiple of the basis vector must then be equal to the length of vector x. For instance, length or norm of vector [ 2 4 4 ] = (2^2 + 2. 4^2) ^1/2 = 6. Then the reflected vector must be 6 times the basis vector = [ 6 0 0 ]. In summary, vector x is known, so then basis vector times the multiple is known = norm x. b. These two vectors are reflected across a hyperplane, or mirror between the two vectors, which is the sum of the two column vectors = [ 8 4 4 ].
 
 
 ### 2.2 Portions parallel & perpendicular
@@ -130,18 +155,17 @@ To reflect each column of the matrix across the hyperplane, keep the portion in 
 
 We could multiply the entire nxn matrix by the reflection matrix embedded in an nxn identity matrix. However, to speed the calculations we can multiply by the smaller reflection matrix. By way of visual demonstration below, where only x influence the outcome. So in the below example we can reduce the calculations to multiplying 3x3 . 3x4 = 3x4.
 
-[ 1 - - - ].[ b b b b ] = [ b b b b ]  
-[ - x x x ] [ x x x x ]   [ x x x x ]  
-[ - x x x ] [ x x x x ]   [ x x x x ]  
-[ - x x x ] [ x x x x ]   [ x x x x ]  
+[ 1 0 0 0 ].[ b b b b ] = [ b b b b ]  
+[ 0 x x x ] [ x x x x ]   [ x x x x ]  
+[ 0 x x x ] [ x x x x ]   [ x x x x ]  
+[ 0 x x x ] [ x x x x ]   [ x x x x ]  
 
 Multiplying on the right side 4x3 . 3x3 = 4x3.
 
-[ a x x x ].[ 1 - - - ] = [ a x x x ]  
-[ a x x x ] [ - x x x ]   [ a x x x ]  
-[ a x x x ] [ - x x x ]   [ a x x x ]  
-[ a x x x ] [ - x x x ]   [ a x x x ]  
-
+[ a x x x ].[ 1 0 0 0 ] = [ a x x x ]  
+[ a x x x ] [ 0 x x x ]   [ a x x x ]  
+[ a x x x ] [ 0 x x x ]   [ a x x x ]  
+[ a x x x ] [ 0 x x x ]   [ a x x x ]  
 
 
 ## 3. QR decomposition function
@@ -160,42 +184,49 @@ The objective is to rotate the column vector [ a b ] from the diagonal and subdi
 
 As before, we can reduce calculations. 
 
-[ 1 - - - - ].[ b b b b b ] = [ b b b b b ]  
-[ - x x - - ] [ x x x x x ]   [ x x x x x ]  
-[ - x x - - ] [ - x x x x ]   [ x x x x x ]  
-[ - - - 1 - ] [ - - b b b ]   [ - - b b b ]  
-[ - - - - 1 ] [ - - - b b ]   [ - - - b b ]  
+[ 1 0 0 0 0 ].[ b b b b b ] = [ b b b b b ]  
+[ 0 x x 0 0 ] [ x x x x x ]   [ x x x x x ]  
+[ 0 x x 0 0 ] [ 0 x x x x ]   [ x x x x x ]  
+[ 0 0 0 1 0 ] [ 0 0 b b b ]   [ 0 0 b b b ]  
+[ 0 0 0 0 1 ] [ 0 0 0 b b ]   [ 0 0 0 b b ]  
 
-[ a x x a a ].[ 1 - - - - ] = [ a x x a a ]  
-[ a x x a a ] [ - x x - - ]   [ a x x a a ]  
-[ - x x a a ] [ - x x - - ]   [ - x x a a ]  
-[ - - x a a ] [ - - - 1 - ]   [ - x x a a ]  
-[ - - - a a ] [ - - - - 1 ]   [ - - - a a ]  
+[ a x x a a ].[ 1 0 0 0 0 ] = [ a x x a a ]  
+[ a x x a a ] [ 0 x x 0 0 ]   [ a x x a a ]  
+[ 0 x x a a ] [ 0 x x 0 0 ]   [ 0 x x a a ]  
+[ 0 0 x a a ] [ 0 0 0 1 0 ]   [ 0 x x a a ]  
+[ 0 0 0 a a ] [ 0 0 0 0 1 ]   [ 0 0 0 a a ]  
 
 
 ### 3.3 Wilkinson shift function
 
-While the Givens rotations can be applied directly to the Hessenberg matrix, convergence would be slow. To speed convergence the Wilkinson shift essentially subtracts an eigenvalue from the matrix diagonal before applying the Givens rotation. The difference is an improvement from about 1250+ iterations without shift, to about 500+ iterations with shift for the example provided.
+While the Givens rotations can be applied directly to the Hessenberg matrix, convergence would be slow. To speed convergence the Wilkinson shift essentially subtracts an eigenvalue from the current matrix diagonal before applying the Givens rotation. The difference is an improvement from about 1250+ iterations without shift, to about 500+ iterations with shift for the example provided.
 
-Instead of re-deriving the formula, we will just check the formula used for Wilkinson shift is consistent with the eigenvalue formula we derived in the theory section. Starting then with the formula used for Wilkinson shift:
+Instead of re-deriving the formula, we will just check the formula used for Wilkinson shift is consistent with the eigenvalue formula we derived in section 1.3. Starting then with the formula used for Wilkinson shift:
 
-* w = d - c^2 / ((a - d)/2 + (((a - d) /2) ^2 + c^2) ^1/2)
-* w = d - c^2 / (eig - d)   subs from theory section  eig = (a + d)/2 +- (((a - d) /2) ^2 + b.c) ^1/2
+* w = d - c^2 / ((a - d)/2 + sqrt(((a - d)/2)^2 + c^2))
+* w = d - c^2 / (eig - d)   subs from theory section  eig = (a + d)/2 +- sqrt(((a - d)/2)^2 + b.c)
 * w. eig - w. d = d. eig - d^2 - c^2
 * w. eig = d.(eig + w) - d^2 - c^2
 * if w is actually one of the eigenvalues, then trace = sum eigenvalues = a + d
 * eig1. eig2 = d.a + d^2 - d^2 - c^2
 * eig1. eig2 = a.d - c^2
 
-Left side is the product of eigenvalues, right side is the determinant of the underlying matrix. From the theory section, these are equal. Check complete. Wilkinson shift gives one of the eigenvalues.
+Left side is the product of eigenvalues, right side is the determinant of the underlying matrix. From the theory section, these are equal. Check complete. Wilkinson shift gives one of the eigenvalues. This is for the work in progress matrix, which should give a close approximation of the actual eigenvalue we seek.
 
 
-### 3.4 Power iteration
+### 3.4 Decomposition function
+
+The decomposition function first adjusts matrix H by subtracting the Wilkinson shift from each value in the diagonal. This should generally increase the ratio (calculated larger/smaller) between the actual eigenvalue that w represents and the other eigenvalues, which speeds convergence.
+
+The Givens rotations return H' = QT.(H - w.I).Q = QT.H.Q - QT.w.I.Q. The first term is the matrix we want to take forward. And to eliminate the second term, we know w is a scalar, and I is the identity matrix, so both commute. So the second term is negative w.I.QT.Q. We know Q represents an orthonormal matrix, so by definition QT = Q inverse which simplifies QT.Q = I. So then the second term is negative w.I. So adding w.I will give QT.H.Q. This is consistent with how the decomposition function adjusts the matrix.
+
+
+### 3.5 Power iteration
 
 Ignoring subtleties of the decomposition function calculations for a moment:
 
 * Givens function takes input M & returns Q R where M = Q.R
-* so R = QT.M
+* so we know QT.M = R (could multiply the above by QT)
 * decomposition function recombines M2 as R.Q = (QT.M).Q
 * iteration continues eg M4 = Q3T.Q2T.QT.M.Q.Q2.Q3
 
